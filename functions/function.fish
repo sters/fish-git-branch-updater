@@ -29,9 +29,12 @@ function git-branch-updater --description 'Update git branches with latest remot
     echo
 
     echo "Fetching remote branches..."
-    #git fetch --prune 2>&1 > /dev/null
+    git fetch --prune 2>&1 > /dev/null
 
     echo
+
+    set remoteBranch (_git-branch-updater_default-read "Input target remote Branch name" "main")
+    set remoteBranch (echo "origin/$remoteBranch")
 
     # store current HEAD, and back this HEAD later.
     set currentHEAD (git branch --contains | grep '*' | cut -d " " -f 2)
@@ -40,9 +43,6 @@ function git-branch-updater --description 'Update git branches with latest remot
     end
     set currentHEAD (string trim $currentHEAD)
     echo "Current HEAD:" $currentHEAD
-
-    set remoteBranch (_git-branch-updater_default-read "Input target remote Branch name" "main")
-    set remoteBranch (echo "origin/$remoteBranch")
 
     # set updateMethod (_git-branch-updater_default-read "merge or rebase, which method do you want?" "merge")
     set updateMethod "merge"
@@ -57,7 +57,6 @@ function git-branch-updater --description 'Update git branches with latest remot
         echo -n $branch" ... "
 
         git switch -q -C $tmpBranchName $remoteTargetBranch 2>&1 > /dev/null
-        # set result (git $updateMethod -q --no-sumary --no-progress --no-stat origin/$remoteBranch 2>&1)
         set result (git $updateMethod -q --no-summary --no-progress --no-stat $remoteBranch 2>&1)
         if test $status -ne 0
             git reset --hard -q
@@ -65,10 +64,12 @@ function git-branch-updater --description 'Update git branches with latest remot
             continue
         end
 
+        # TODO: no-push option
         git push -q origin $tmpBranchName:$branch
         echo "OK"
     end
 
+    # back to current head
     git switch -q $currentHEAD 2>&1 > /dev/null
 
     # remove all tmp branches
